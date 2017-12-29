@@ -6,16 +6,16 @@ Describe "Invoke-OSMonitoring" {
     It "Should invoke OS monitoring" {
 
         $poShMonConfiguration = New-PoShMonConfiguration {
-                        New-GeneralConfig `
+                        General `
                             -EnvironmentName 'OS Base Test' `
                             -MinutesToScanHistory 60 `
                             -ServerNames 'Server01','Server02' `
                             -ConfigurationName SpFarmPosh `
                             -TestsToSkip 'Memory'
-                        New-NotificationsConfig -When All {
-                            New-EmailConfig -ToAddress "someone@email.com" -FromAddress "all@jones.com" -SmtpServer "smtp.company.com"
-                            New-PushBulletConfig -AccessToken "TestAccessToken" -DeviceId "TestDeviceID"
-                            New-O365TeamsConfig -TeamsWebHookUrl "http://teams.office.com/theapi"
+                        Notifications -When All {
+                            Email -ToAddress "someone@email.com" -FromAddress "all@jones.com" -SmtpServer "smtp.company.com"
+                            Pushbullet -AccessToken "TestAccessToken" -DeviceId "TestDeviceID"
+                            O365Teams -TeamsWebHookUrl "http://teams.office.com/theapi"
                         }               
                     }
 
@@ -67,46 +67,8 @@ Describe "Invoke-OSMonitoring2" {
 
         $poShMonConfiguration = New-PoShMonConfiguration {}
         
-        <#
-        Mock -CommandName Invoke-Tests -ModuleName PoShMon -Verifiable -MockWith {
-            Begin
-            {
-                $outputValues = @()
-            }
-
-            Process
-            {
-                foreach ($test in $TestToRuns)
-                {
-                    $outputValues += @{
-                                    "SectionHeader" = "Mock Test: $test"
-                                    "OutputHeaders" = @{ 'Item1' = 'Item 1'; }
-                                    "NoIssuesFound" = $false
-                                    "ElapsedTime" = (Get-Date).Subtract((Get-Date).AddMinutes(-1))
-                                    "OutputValues" = @(
-                                                        @{
-                                                            "Item1" = 123
-                                                            "State" = "State 1"
-                                                        }
-                                                    )
-                                }
-                }
-            }
-    
-            End
-            {
-                return $outputValues
-            }
-        }
-        Mock -CommandName Initialize-Notifications -ModuleName PoShMon -Verifiable -MockWith {
-            Write-Verbose "Tests Run:"
-            $TestOutputValues | % { Write-Verbose "`t$($_.SectionHeader)" }
-            return
-        }
-        #>
-        
-        $actual = Invoke-OSMonitoring $poShMonConfiguration -Verbose
-
-        Assert-VerifiableMock
+		$actual = Invoke-OSMonitoring $poShMonConfiguration -Verbose
+		
+		0 | Should Not Be $null 
     }
 }

@@ -7,28 +7,28 @@ $o365TeamsConfigPath = [Environment]::GetFolderPath("MyDocuments") + "\o365Teams
 Describe "Send-MonitoringNotifications" {
     InModuleScope PoShMon {
 
-        Mock -CommandName Get-Module -Verifiable -MockWith {
-            return @(
-                        [pscustomobject]@{
-                            Version = "1.2.3"
-                        }
-                    )
-        }
+        #Mock -CommandName Get-Module -Verifiable -MockWith {
+        #    return @(
+        ##                [pscustomobject]@{
+        #                    Version = "1.2.3"
+        #                }
+        #            )
+        #}
 
         It "Should send notifications to the specified channels (email, Pushbullet, O365 Teams)" {
 
             $poShMonConfiguration = New-PoShMonConfiguration {
-                            New-GeneralConfig `
+                            General `
                                 -EnvironmentName 'SharePoint' `
                                 -MinutesToScanHistory 60 `
                                 -PrimaryServerName 'APPServer1' `
                                 -ConfigurationName SpFarmPosh `
                                 -SkipVersionUpdateCheck `
                                 -TestsToSkip 'SPServerStatus','WindowsServiceState','SPFailingTimerJobs','SPDatabaseHealth','SPSearchHealth','SPDistributedCacheHealth','WebTests'
-                            New-NotificationsConfig -When All {
-                                New-EmailConfig -ToAddress "hilton@email.com" -FromAddress "all@jones.com" -SmtpServer "smtp.company.com"
-                                New-PushBulletConfig -AccessToken "TestAccessToken" -DeviceId "TestDeviceID"
-                                New-O365TeamsConfig -TeamsWebHookUrl "http://teams.office.com/theapi"
+                            Notifications -When All {
+                                Email -ToAddress "hilton@email.com" -FromAddress "all@jones.com" -SmtpServer "smtp.company.com"
+                                Pushbullet -AccessToken "TestAccessToken" -DeviceId "TestDeviceID"
+                                O365Teams -TeamsWebHookUrl "http://teams.office.com/theapi"
                             }
                         }
 
@@ -83,99 +83,18 @@ Describe "Send-MonitoringNotifications" {
 
             $totalElapsedTime = (Get-Date).Subtract((Get-Date).AddMinutes(-3))
 
-            Mock -CommandName Send-PoShMonEmail -ModuleName PoShMon -Verifiable -MockWith {
+            Mock -CommandName Send-EmailMonitoringMessage -ModuleName PoShMon -Verifiable -MockWith {
                 return
             }
-            Mock -CommandName Send-PushbulletMessage -ModuleName PoShMon -Verifiable -MockWith {
+            Mock -CommandName Send-PushbulletMonitoringMessage -ModuleName PoShMon -Verifiable -MockWith {
                 return
             }
-            Mock -CommandName Send-O365TeamsMessage -ModuleName PoShMon -Verifiable -MockWith {
-                return
-            }
-
-            $actual = Send-MonitoringNotifications $poShMonConfiguration $poShMonConfiguration.Notifications.Sinks "All" $testMonitoringOutput $totalElapsedTime
-
-            Assert-VerifiableMock
-        }
-
-        It "Should send notifications to ONLY the specified channels (email, Pushbullet, O365 Teams)" {
-
-            #$o365TeamsConfig = Get-Content -Raw -Path $o365TeamsConfigPath | ConvertFrom-Json
-
-            $poShMonConfiguration = New-PoShMonConfiguration {
-                            New-GeneralConfig `
-                                -EnvironmentName 'SharePoint' `
-                                -MinutesToScanHistory 60 `
-                                -PrimaryServerName 'APPServer1' `
-                                -ConfigurationName SpFarmPosh `
-                                -SkipVersionUpdateCheck `
-                                -TestsToSkip 'SPServerStatus','WindowsServiceState','SPFailingTimerJobs','SPDatabaseHealth','SPSearchHealth','SPDistributedCacheHealth','WebTests'
-                            New-NotificationsConfig -When All {
-                                New-EmailConfig -ToAddress "hilton@email.com" -FromAddress "all@jones.com" -SmtpServer "smtp.company.com"
-                                New-PushBulletConfig -AccessToken "TestAccessToken" -DeviceId "TestDeviceID"
-                            }
-                        }
-
-            $testMonitoringOutput = @(
-                @{
-                    "SectionHeader" = "Grouped Test With A Long Name"
-                    "OutputHeaders" = @{ 'EventID' = 'Event ID'; 'Message' ='Message' }
-                    "NoIssuesFound" = $true
-                    "ElapsedTime" = (Get-Date).Subtract((Get-Date).AddMinutes(-1))
-                    "OutputValues" = @(
-                                        @{
-                                            "GroupName" = "Server 1"
-                                            "GroupOutputValues" = @(
-                                                @{
-                                                    "EventID" = 123
-                                                    "Message" = "Message 1"
-                                                },
-                                                @{
-                                                    "EventID" = 456
-                                                    "Message" = "Message 2"
-                                                }
-                                            )
-                                        },
-                                        @{
-                                            "GroupName" = "Server 2"
-                                            "GroupOutputValues" = @(
-                                                @{
-                                                    "EventID" = 789
-                                                    "Message" = "Message 3"
-                                                }
-                                            )
-                                        }
-                                    )
-                }
-                @{
-                    "SectionHeader" = "Ungrouped Test"
-                    "OutputHeaders" = @{ 'ComponentName' = 'Component'; 'State' = 'State' }
-                    "NoIssuesFound" = $false
-                    "ElapsedTime" = (Get-Date).Subtract((Get-Date).AddMinutes(-1))
-                    "OutputValues" = @(
-                                        @{
-                                            "Component" = 123
-                                            "State" = "State 1"
-                                        },
-                                        @{
-                                            "Component" = 456
-                                            "State" = "State 2"
-                                        }
-                                    )
-                }
-            )
-
-            $totalElapsedTime = (Get-Date).Subtract((Get-Date).AddMinutes(-3))
-
-            Mock -CommandName Send-PoShMonEmail -ModuleName PoShMon -Verifiable -MockWith {
-                return
-            }
-            Mock -CommandName Send-PushbulletMessage -ModuleName PoShMon -Verifiable -MockWith {
+            Mock -CommandName Send-O365TeamsMonitoringMessage -ModuleName PoShMon -Verifiable -MockWith {
                 return
             }
 
             $actual = Send-MonitoringNotifications $poShMonConfiguration $poShMonConfiguration.Notifications.Sinks "All" $testMonitoringOutput $totalElapsedTime
-        
+
             Assert-VerifiableMock
         }
 
@@ -184,16 +103,16 @@ Describe "Send-MonitoringNotifications" {
             #$o365TeamsConfig = Get-Content -Raw -Path $o365TeamsConfigPath | ConvertFrom-Json
 
             $poShMonConfiguration = New-PoShMonConfiguration {
-                            New-GeneralConfig `
+                            General `
                                 -EnvironmentName 'SharePoint' `
                                 -MinutesToScanHistory 60 `
                                 -PrimaryServerName 'APPServer1' `
                                 -ConfigurationName SpFarmPosh `
                                 -SkipVersionUpdateCheck `
                                 -TestsToSkip 'SPServerStatus','WindowsServiceState','SPFailingTimerJobs','SPDatabaseHealth','SPSearchHealth','SPDistributedCacheHealth','WebTests'
-                            New-NotificationsConfig -When OnlyOnFailure {
-                                New-EmailConfig -ToAddress "hilton@email.com" -FromAddress "all@jones.com" -SmtpServer "smtp.company.com"
-                                New-PushBulletConfig -AccessToken "TestAccessToken" -DeviceId "TestDeviceID"
+                            Notifications -When OnlyOnFailure {
+                                Email -ToAddress "hilton@email.com" -FromAddress "all@jones.com" -SmtpServer "smtp.company.com"
+                                Pushbullet -AccessToken "TestAccessToken" -DeviceId "TestDeviceID"
                             }
                         }
 
@@ -216,29 +135,127 @@ Describe "Send-MonitoringNotifications" {
 
             $totalElapsedTime = (Get-Date).Subtract((Get-Date).AddMinutes(-3))
 
-            Mock -CommandName Send-PoShMonEmail -ModuleName PoShMon -Verifiable -MockWith { return } -ParameterFilter { $Critical -eq $true }
-            Mock -CommandName Send-PushbulletMessage -ModuleName PoShMon -Verifiable -MockWith { return } -ParameterFilter { $Critical -eq $true }
+            Mock -CommandName Send-EmailMonitoringMessage -ModuleName PoShMon -Verifiable -MockWith { return } -ParameterFilter { $Critical -eq $true }
+            Mock -CommandName Send-PushbulletMonitoringMessage -ModuleName PoShMon -Verifiable -MockWith { return } -ParameterFilter { $Critical -eq $true }
 
             $actual = Send-MonitoringNotifications $poShMonConfiguration $poShMonConfiguration.Notifications.Sinks $poShMonConfiguration.Notifications.When $testMonitoringOutput $totalElapsedTime
         
             Assert-VerifiableMock
         }
+    }
+}
+Describe "Send-MonitoringNotifications-New-Scope" {
+    InModuleScope PoShMon {
+
+        It "Should send notifications to ONLY the specified channels (email, Pushbullet, O365 Teams)" {
+
+            #$o365TeamsConfig = Get-Content -Raw -Path $o365TeamsConfigPath | ConvertFrom-Json
+
+            $poShMonConfiguration = New-PoShMonConfiguration {
+                            General `
+                                -EnvironmentName 'SharePoint' `
+                                -MinutesToScanHistory 60 `
+                                -PrimaryServerName 'APPServer1' `
+                                -ConfigurationName SpFarmPosh `
+                                -SkipVersionUpdateCheck `
+                                -TestsToSkip 'SPServerStatus','WindowsServiceState','SPFailingTimerJobs','SPDatabaseHealth','SPSearchHealth','SPDistributedCacheHealth','WebTests'
+                            Notifications -When All {
+                                Email -ToAddress "hilton@email.com" -FromAddress "all@jones.com" -SmtpServer "smtp.company.com"
+                                Pushbullet -AccessToken "TestAccessToken" -DeviceId "TestDeviceID"
+                            }
+                        }
+
+            $testMonitoringOutput = @(
+                @{
+                    "SectionHeader" = "Grouped Test With A Long Name"
+                    "OutputHeaders" = @{ 'EventID' = 'Event ID'; 'Message' ='Message' }
+                    "NoIssuesFound" = $true
+                    "ElapsedTime" = (Get-Date).Subtract((Get-Date).AddMinutes(-1))
+                    "OutputValues" = @(
+                                        @{
+                                            "GroupName" = "Server 1"
+                                            "GroupOutputValues" = @(
+                                                @{
+                                                    "EventID" = 123
+                                                    "Message" = "Message 1"
+                                                },
+                                                @{
+                                                    "EventID" = 456
+                                                    "Message" = "Message 2"
+                                                }
+                                            )
+                                        },
+                                        @{
+                                            "GroupName" = "Server 2"
+                                            "GroupOutputValues" = @(
+                                                @{
+                                                    "EventID" = 789
+                                                    "Message" = "Message 3"
+                                                }
+                                            )
+                                        }
+                                    )
+                }
+                @{
+                    "SectionHeader" = "Ungrouped Test"
+                    "OutputHeaders" = @{ 'ComponentName' = 'Component'; 'State' = 'State' }
+                    "NoIssuesFound" = $false
+                    "ElapsedTime" = (Get-Date).Subtract((Get-Date).AddMinutes(-1))
+                    "OutputValues" = @(
+                                        @{
+                                            "Component" = 123
+                                            "State" = "State 1"
+                                        },
+                                        @{
+                                            "Component" = 456
+                                            "State" = "State 2"
+                                        }
+                                    )
+                }
+            )
+
+            $totalElapsedTime = (Get-Date).Subtract((Get-Date).AddMinutes(-3))
+
+            Mock -CommandName Send-EmailMonitoringMessage -ModuleName PoShMon -Verifiable -MockWith {
+                return
+            }
+            Mock -CommandName Send-PushbulletMonitoringMessage -ModuleName PoShMon -Verifiable -MockWith {
+                return
+            }
+            Mock -CommandName Send-O365TeamsMonitoringMessage -ModuleName PoShMon -MockWith {
+                return
+            }
+
+            $actual = Send-MonitoringNotifications $poShMonConfiguration $poShMonConfiguration.Notifications.Sinks "All" $testMonitoringOutput $totalElapsedTime
+        
+            Assert-VerifiableMock
+            Assert-MockCalled -CommandName Send-O365TeamsMonitoringMessage -Times 0
+        }
+
+    }
+}
+Describe "Send-MonitoringNotifications-New-Scope2" {
+    InModuleScope PoShMon {
+
+        Mock -CommandName Send-EmailMonitoringMessage -ModuleName PoShMon -Verifiable -MockWith { return } -ParameterFilter { $Critical -eq $false }
+        Mock -CommandName Send-PushbulletMonitoringMessage -ModuleName PoShMon -Verifiable -MockWith { return } -ParameterFilter { $Critical -eq $false }
+
 
         It "Should mark non-failures as NOT Critical" {
 
             #$o365TeamsConfig = Get-Content -Raw -Path $o365TeamsConfigPath | ConvertFrom-Json
 
             $poShMonConfiguration = New-PoShMonConfiguration {
-                            New-GeneralConfig `
+                            General `
                                 -EnvironmentName 'SharePoint' `
                                 -MinutesToScanHistory 60 `
                                 -PrimaryServerName 'APPServer1' `
                                 -ConfigurationName SpFarmPosh `
                                 -SkipVersionUpdateCheck `
                                 -TestsToSkip 'SPServerStatus','WindowsServiceState','SPFailingTimerJobs','SPDatabaseHealth','SPSearchHealth','SPDistributedCacheHealth','WebTests'
-                            New-NotificationsConfig -When OnlyOnFailure {
-                                New-EmailConfig -ToAddress "hilton@email.com" -FromAddress "all@jones.com" -SmtpServer "smtp.company.com"
-                                New-PushBulletConfig -AccessToken "TestAccessToken" -DeviceId "TestDeviceID"
+                            Notifications -When OnlyOnFailure {
+                                Email -ToAddress "hilton@email.com" -FromAddress "all@jones.com" -SmtpServer "smtp.company.com"
+                                Pushbullet -AccessToken "TestAccessToken" -DeviceId "TestDeviceID"
                             }
                         }
 
@@ -261,8 +278,6 @@ Describe "Send-MonitoringNotifications" {
 
             $totalElapsedTime = (Get-Date).Subtract((Get-Date).AddMinutes(-3))
 
-            Mock -CommandName Send-PoShMonEmail -ModuleName PoShMon -Verifiable -MockWith { return } -ParameterFilter { $Critical -eq $false }
-            Mock -CommandName Send-PushbulletMessage -ModuleName PoShMon -Verifiable -MockWith { return } -ParameterFilter { $Critical -eq $false }
 
             $actual = Send-MonitoringNotifications $poShMonConfiguration $poShMonConfiguration.Notifications.Sinks $poShMonConfiguration.Notifications.When $testMonitoringOutput $totalElapsedTime
         
@@ -274,16 +289,16 @@ Describe "Send-MonitoringNotifications" {
             #$o365TeamsConfig = Get-Content -Raw -Path $o365TeamsConfigPath | ConvertFrom-Json
 
             $poShMonConfiguration = New-PoShMonConfiguration {
-                            New-GeneralConfig `
+                            General `
                                 -EnvironmentName 'SharePoint' `
                                 -MinutesToScanHistory 60 `
                                 -PrimaryServerName 'APPServer1' `
                                 -ConfigurationName SpFarmPosh `
                                 -SkipVersionUpdateCheck `
                                 -TestsToSkip 'SPServerStatus','WindowsServiceState','SPFailingTimerJobs','SPDatabaseHealth','SPSearchHealth','SPDistributedCacheHealth','WebTests'
-                            New-NotificationsConfig -When All {
-                                New-EmailConfig -ToAddress "hilton@email.com" -FromAddress "all@jones.com" -SmtpServer "smtp.company.com"
-                                New-PushBulletConfig -AccessToken "TestAccessToken" -DeviceId "TestDeviceID"
+                            Notifications -When All {
+                                Email -ToAddress "hilton@email.com" -FromAddress "all@jones.com" -SmtpServer "smtp.company.com"
+                                Pushbullet -AccessToken "TestAccessToken" -DeviceId "TestDeviceID"
                             }
                         }
 
@@ -305,9 +320,6 @@ Describe "Send-MonitoringNotifications" {
             )
 
             $totalElapsedTime = (Get-Date).Subtract((Get-Date).AddMinutes(-3))
-
-            Mock -CommandName Send-PoShMonEmail -ModuleName PoShMon -Verifiable -MockWith { return } -ParameterFilter { $Critical -eq $false }
-            Mock -CommandName Send-PushbulletMessage -ModuleName PoShMon -Verifiable -MockWith { return } -ParameterFilter { $Critical -eq $false }
 
             $actual = Send-MonitoringNotifications $poShMonConfiguration $poShMonConfiguration.Notifications.Sinks $poShMonConfiguration.Notifications.When $testMonitoringOutput $totalElapsedTime
         
