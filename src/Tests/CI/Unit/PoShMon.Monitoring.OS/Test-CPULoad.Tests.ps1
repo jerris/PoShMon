@@ -179,5 +179,62 @@ Describe "Test-CPULoad" {
             $actual.OutputValues.Highlight.Count | Should Be 1
             $actual.OutputValues.Highlight | Should Be 'CPULoad'
         }
+        It "Should allow an array as input without the current machine listed" {
+        
+            Mock -CommandName Get-Counter -MockWith {
+                $sample1 = [CounterSampleMock]::new("\\Server1\\processor(_total)\% processor time", 12.345)
+                $sample2 = [CounterSampleMock]::new("\\Server1\\processor(_total)\% processor time", 57.789)
+                $samples = @($sample1, $sample2)
+                $timestamp = Get-Date
+                return [CounterResultsMock]::new($timestamp, $samples)
+            }
+
+            $poShMonConfiguration = New-PoShMonConfiguration {
+                            General -ServerNames ("Server1","Server2")
+                            OperatingSystem 
+                        }
+
+            $actual = Test-CPULoad $poShMonConfiguration
+        
+            $actual.NoIssuesFound | Should Be $true
+        }
+        It "Should fail if string as input is not the local system" {
+        
+            Mock -CommandName Get-Counter -MockWith {
+                $sample1 = [CounterSampleMock]::new("\\Server1\\processor(_total)\% processor time", 12.345)
+                $sample2 = [CounterSampleMock]::new("\\Server1\\processor(_total)\% processor time", 57.789)
+                $samples = @($sample1, $sample2)
+                $timestamp = Get-Date
+                return [CounterResultsMock]::new($timestamp, $samples)
+            }
+
+            $poShMonConfiguration = New-PoShMonConfiguration {
+                            General -ServerNames 'NotLocalhost'
+                            OperatingSystem 
+                        }
+
+            $actual = Test-CPULoad $poShMonConfiguration
+        
+            $actual.NoIssuesFound | Should Be $true
+        }
+        It "Should succeed if a string as input is the current machine listed as localhost or the machine name" {
+        
+            Mock -CommandName Get-Counter -MockWith {
+                $sample1 = [CounterSampleMock]::new("\\localhost\\processor(_total)\% processor time", 12.345)
+                $sample2 = [CounterSampleMock]::new("\\localhost\\processor(_total)\% processor time", 57.789)
+                $samples = @($sample1, $sample2)
+                $timestamp = Get-Date
+                return [CounterResultsMock]::new($timestamp, $samples)
+            }
+
+            $poShMonConfiguration = New-PoShMonConfiguration {
+                            General -ServerNames 'localhost'
+                            OperatingSystem 
+                        }
+
+            $actual = Test-CPULoad $poShMonConfiguration
+        
+            $actual.NoIssuesFound | Should Be $true
+        }
     }
 }

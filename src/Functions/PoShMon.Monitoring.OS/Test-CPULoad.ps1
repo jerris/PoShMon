@@ -5,14 +5,43 @@ Function Test-CPULoad
         [hashtable]$PoShMonConfiguration
     )
 
+    # Initialization Section
     if ($PoShMonConfiguration.OperatingSystem -eq $null) { throw "'OperatingSystem' configuration not set properly on PoShMonConfiguration parameter." }
 
     $mainOutput = Get-InitialOutputWithTimer -SectionHeader "Server CPU Load Review" -OutputHeaders ([ordered]@{ 'ServerName' = 'Server Name'; 'CPULoad' = 'CPU Load (%)' })
+    $serverNames = $PoShMonConfiguration.General.ServerNames
+    $results = @()
 
-    if ($PoShMonConfiguration.General.ServerNames -eq $env:COMPUTERNAME)
-        { $results = Get-Counter "\processor(_total)\% processor time" }
-    else
-        { $results = Get-Counter "\processor(_total)\% processor time" -Computername $PoShMonConfiguration.General.ServerNames }
+    # Retreive processor counters from computers
+    if ($PoShMonConfiguration.General.ServerNames -is [String]) {       
+        
+        $serverName = $ServerNames
+
+        if (($serverName -eq $env:COMPUTERNAME) -or ($serverName -eq "localhost")) {
+            $results += Get-Counter "\processor(_total)\% processor time"
+        }       
+        else {
+            throw "''OperatingSystem' in PoShMonconfiguration is not set properly. It had a single name listed, but was not the local system name. It must either be this or an array of computer names."
+        }
+
+    } 
+
+    elseif ($PoShMonConfiguration.General.ServerNames -is [Array]) { 
+
+        foreach ($serverName in $serverNames)
+        {
+            if (($serverName -eq $env:COMPUTERNAME) -or ($serverName -eq "localhost")) {
+                $results += Get-Counter "\processor(_total)\% processor time"
+            }
+            else {
+                $results += Get-Counter "\processor(_total)\% processor time" -Computername $ServerName
+            }
+        }
+    }  
+
+    else {
+        throw "'OperatingSystem' in PoShMonconfiguration is not set properly. It must be either a string or an array"
+    }
 
     foreach ($counterResult in $results.CounterSamples)
     {
